@@ -1,0 +1,16 @@
+[core]
+	quotepath = false
+	fileMode = false
+[user]
+	name = Colin Han
+	email = colin.han@grapecity.com
+[color]
+	ui = true
+[alias]
+	st = status -s
+	ll = log --oneline --graph
+	cm = commit
+	co = checkout
+	sl = stash list
+	ss = show stash@{0}
+	sp = stash pop

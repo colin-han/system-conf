@@ -1,0 +1,22 @@
+#!/bin/bash
+
+hl=$(tput setaf 6)
+he=$(tput sgr0)
+
+tmp=`git status -s`
+if [[ "$tmp" != "" ]]; then
+    echo "${hl}Stashing current change... ${he}"
+    git status -s
+    git stash -u > /dev/nul
+    echo
+fi
+
+echo "${hl}Pulling from TFS... ${he}"
+git svn rebase
+echo
+
+if [[ "$tmp" != "" ]]; then
+    echo "${hl}Restoring your working status... ${he}"
+    git stash pop > /dev/nul
+    git diff
+fi

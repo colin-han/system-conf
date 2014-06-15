@@ -1,0 +1,123 @@
+#!/bin/bash
+
+hl=$(tput setaf 3)
+he=$(tput sgr0)
+
+while [[ $# > 0 ]]; do
+    p=$1
+    shift
+    case $p in 
+        -m) comments=$1; shift;;
+        -s) task=$1; shift;;
+        *) 
+            echo 'usage:'
+            echo '  git fci [-m "message"] [-s workItemId]'
+            exit 1
+            ;;
+    esac
+done
+
+if [[ "$comments" == "" ]]; then
+    comments=`git log -1 --format=%s`
+    echo "This checkin will use comments like: "
+    echo ""
+    echo "${hl}    $comments ${he}"
+    echo ""
+    read -p "Are you sure this commit? [Y/n]" r
+    if [[ "$r" != "" && "$r" != "y" && "$r" != "Y" ]]; then
+        echo Please specified a commands by paramenters.
+        exit 1;
+    fi
+fi
+
+CURR_DIR=$PWD
+GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
+ROOT_DIR=$(git rev-parse --show-toplevel 2>/dev/null)
+
+cd $ROOT_DIR
+
+currentBranch=$(git branch --no-color | grep '^\* ' | grep -v 'no branch' | sed 's/^* //g')
+
+git checkout master
+if [ $? -ne 0 ]; then
+    echo Please keep working dir clear, then run this tool again.
+    exit 1;
+fi
+
+#read -p "input your username [grapecity\colinhan]: " username
+#if [[ "$username" == "" ]]; then username='grapecity\colinhan'; fi
+
+# password=''
+# while [[ "$password" == "" ]]; do
+    # read -s -p "input your password: " password
+# done
+
+##save the username and password.
+# git config git-tf.server.username "$username"
+# git config git-tf.server.pasword "$password"
+
+git tf pull
+if [ $? -ne 0 ]; then
+    # remove saved password.
+    git config --unset git-tf.server.username
+    git config --unset git-tf.server.pasword
+	exit 1;
+fi
+git checkout $currentBranch
+git merge master --no-ff -m "Merge branch 'master' into $currentBranch"
+
+if [[ "$rmignore" == "y" ]]; then
+    git checkout -B __tmp_cmt
+    if [ $? -ne 0 ]; then
+        # remove saved password.
+        git config --unset git-tf.server.username
+        git config --unset git-tf.server.pasword
+        echo Please keep working dir clear, then run this tool again.
+        exit 1;
+    fi
+
+    mv .gitignore $GIT_DIR/temp_gitignore
+    git rm .gitignore
+    git commit -m "Temporal remove .gitignore"
+    git checkout master
+    git merge __tmp_cmt -m "Commit change, Comments: '$comments'" --no-ff
+    if [ $? -ne 0 ]; then
+        # remove saved password.
+        git config --unset git-tf.server.username
+        git config --unset git-tf.server.pasword
+        exit 1;
+    fi
+else
+    git checkout master
+    git merge $currentBranch
+fi
+
+if [[ "$task" == "" ]]; then
+    git tf checkin --shallow -m "'$comments'"
+else
+    git tf checkin --shallow -m "'$comments'" --resolve=$task
+fi
+
+if [ $? -ne 0 ]; then
+	echo Checkin failed.
+    git config --unset git-tf.server.username
+    git config --unset git-tf.server.pasword
+	exit 1;
+fi
+
+# remove saved password.
+git config --unset git-tf.server.username
+git config --unset git-tf.server.pasword
+
+if [[ "$rmignore" == "y" ]]; then
+    git checkout __tmp_cmt
+    git merge master
+    mv $GIT_DIR/temp_gitignore ./.gitignore
+    git add .gitignore
+    git commit -m "Rollback temporal remove"
+    git checkout $currentBranch
+    git merge __tmp_cmt --no-ff -m "Ensure the basic relation."
+    git branch -D __tmp_cmt
+else
+    git checkout $currentBranch
+fi

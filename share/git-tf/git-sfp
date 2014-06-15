@@ -1,0 +1,22 @@
+#!/bin/bash
+
+hl="\e[36m"
+he="\e[0m"
+
+tmp=`git status -s`
+if [[ "$tmp" != "" ]]; then
+    echo -e "${hl}Stashing current change... ${he}"
+    git status -s
+    git stash -u > /dev/nul
+    echo
+fi
+
+echo -e "${hl}Pulling from TFS... ${he}"
+git fp
+echo
+
+if [[ "$tmp" != "" ]]; then
+    echo -e "${hl}Restoring your working status... ${he}"
+    git stash pop > /dev/nul
+    git diff
+fi

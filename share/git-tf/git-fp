@@ -1,0 +1,52 @@
+#!/bin/bash
+
+CURR_DIR=$PWD
+GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
+ROOT_DIR=$(git rev-parse --show-toplevel 2>/dev/null)
+
+echo $ROOT_DIR
+
+cd $ROOT_DIR
+
+currentBranch=$(git branch --no-color | grep '^\* ' | grep -v 'no branch' | sed 's/^* //g')
+if [[ "$currentBranch" == "master" ]]; then
+	echo 'Please choose another branch to do "tf pull" operation.'
+	exit 1;
+fi
+
+if [[ "`git status -s`" != "" ]]; then
+	echo "Please ensure you working folder clear. then do 'git fp' agine."
+	git status -s
+	exit 1;
+fi
+
+git checkout master
+if [ $? -ne 0 ]; then
+    echo Please keep working dir clear, then run this tool again.
+    exit 1;
+fi
+
+# read -p "input your username [grapecity\colinhan]: " username
+# if [[ "$username" == "" ]]; then username='grapecity\colinhan'; fi
+
+# password=''
+# while [[ "$password" == "" ]]; do
+    # read -s -p "input your password: " password
+# done
+
+# #save the username and password.
+# git config git-tf.server.username "$username"
+# git config git-tf.server.pasword "$password"
+
+git tf pull
+
+# git config --unset git-tf.server.username
+# git config --unset git-tf.server.pasword
+
+if [ $? -ne 0 ]; then
+	exit 1;
+fi
+
+git checkout $currentBranch
+git merge master --no-ff -m "Merge branch 'master' into $currentBranch"
+
